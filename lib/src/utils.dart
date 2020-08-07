@@ -415,8 +415,7 @@ Future<bool> isEmulatorPath() async {
 }
 
 /// Run command and return stdout as [string].
-String cmd(List<String> cmd,
-    {String workingDirectory, bool silent = true}) {
+String cmd(List<String> cmd, {String workingDirectory, bool silent = true}) {
   final result = processManager.runSync(cmd,
       workingDirectory: workingDirectory, runInShell: true);
   _traceCommand(cmd, workingDirectory: workingDirectory);
@@ -424,7 +423,11 @@ String cmd(List<String> cmd,
   if (result.exitCode != 0) {
     if (silent) printError(result.stdout);
     printError(result.stderr);
-    throw 'command failed: exitcode=${result.exitCode}, cmd=\'${cmd.join(" ")}\', workingDir=$workingDirectory';
+    if (!result.stderr
+        .toString()
+        .contains('Unable to boot device in current state: Booted')) {
+      throw 'command failed: exitcode=${result.exitCode}, cmd=\'${cmd.join(" ")}\', workingDir=$workingDirectory';
+    }
   }
   // return stdout
   return result.stdout;

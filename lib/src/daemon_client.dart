@@ -79,9 +79,7 @@ class DaemonClient {
     // process the event
     final event = results[1];
     final eventInfo = jsonDecode(event);
-    if (eventInfo.length != 1 ||
-        eventInfo[0]['event'] != 'device.added' ||
-        eventInfo[0]['params']['emulator'] != true) {
+    if (eventInfo.length != 1 || eventInfo[0]['event'] != 'device.added') {
       throw 'Error: emulator $emulatorId not started: $event';
     }
 
@@ -161,8 +159,13 @@ class DaemonClient {
             if (line.contains('"event":"daemon.logMessage"')) {
               printTrace('Warning: ignoring log message: $line');
             } else {
-              _waitForEvent.complete(line);
-              _waitForEvent = Completer<String>(); // enable wait for next event
+              if (!line.contains('macos') &&
+                  !line.contains('web-server') &&
+                  !line.contains('chrome')) {
+                _waitForEvent.complete(line);
+                _waitForEvent =
+                    Completer<String>(); // enable wait for next event
+              }
             }
           } else if (line != 'Starting device daemon...') {
             throw 'Error: unexpected response from daemon: $line';
@@ -179,6 +182,7 @@ class DaemonClient {
       _waitForResponse = Completer<String>();
       command['id'] = _messageId++;
       final String str = '[${json.encode(command)}]';
+      print('Daemon Command: $str');
       _process.stdin.writeln(str);
       printTrace('==> $str');
     } else {
@@ -233,7 +237,7 @@ Future waitForEmulatorToStart(
     DaemonClient daemonClient, String deviceId) async {
   bool started = false;
   while (!started) {
-    printTrace(
+    print(
         'waiting for emulator/simulator with device id \'$deviceId\' to start...');
     final devices = await daemonClient.devices;
     final device = devices.firstWhere(
